@@ -265,3 +265,11 @@ div#social_icons img {
 span.javascript-comment {
     color: #090;
 }
+
+#byte_content {
+    margin: 5px 0;
+    max-height: 100px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+#byte_range { margin-top: 5px; }
