@@ -1,5 +1,3 @@
-google.load("visualization", "1", {packages: ["corechart"]});
-
 var getTime = function (strTime) {
     'use strict';
     var tabData = strTime.split("-"),
@@ -60,6 +58,7 @@ var wykres2 = function (dane, start, stop, p_czas, czas_od, czas_do) {
         }
         if ((index % 1440) === 0) {
             test.push([new Date(val[3]).toString('d/M/yyyy HH:mm'), val[3]]);
+            tablicaCzasow.push([val[0], val[1]]);
         }
     });
     if ($('select[name="czas_od"] option').length === 0 && $('select[name="czas_do"] option').length === 0) {
@@ -71,10 +70,6 @@ var wykres2 = function (dane, start, stop, p_czas, czas_od, czas_do) {
         $('select[name="czas"]').after(select_data_do);
         $('select[name="czas"]').after(select_data_od);
     }
-
-    data.addColumn('string', 'Czas t[' + p_czas + 'm]');
-    data.addColumn('number', 'Temperatura \u00B0 C');
-    data.addRows(tablicaCzasow);
 
     przedzial = (parseInt(czas_od, 10) > 0 && parseInt(czas_do, 10) > 0) ? '| Wybrany przedział czasu: '
         + new Date(parseInt(czas_od, 10)).toString('d/M/yyyy HH:mm')
@@ -104,8 +99,18 @@ var wykres2 = function (dane, start, stop, p_czas, czas_od, czas_do) {
         vAxis: {titlePosition: 'out', title: 'Temperatura \u00B0 C', titleTextStyle: {color: '#9797E5', fontSize: 12, fontName: 'Verdana, Arial'}},
         chartArea: {left: 40, top: 60}
     };
+    data.addColumn('string', 'Czas t[' + p_czas + 'm]');
+    data.addColumn('number', 'Temperatura \u00B0 C');
 
-    chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+    for (var i = 1; i < tablicaCzasow.length; i++) {
+        data.addRow(tablicaCzasow[i]); 
+    }
+    document.getElementById('chart_div').innerHTML = "loading";
+    google.setOnLoadCallback(reloadData(data, options));
+};
+
+var reloadData = function (data, options) {
+    chart = new google.visualization.LineChart(document.getElementById('chart_div'));    
     chart.draw(data, options);
 };
 
@@ -130,8 +135,9 @@ function readBlob(opt_startByte, opt_stopByte, czas, czas_od, czas_do) {
     }
 
     file = files[0];
-    start = parseInt(opt_startByte) || 0;
-    stop = parseInt(opt_stopByte) || file.size - 1;
+    
+    start = parseInt(opt_startByte, 10) || 0;
+    stop = parseInt(opt_stopByte, 10) || file.size - 1;
 
     // If we use onloadend, we need to check the readyState.
     reader.onloadend = function (evt) {
@@ -153,23 +159,30 @@ function readBlob(opt_startByte, opt_stopByte, czas, czas_od, czas_do) {
         }
     };
 
-    if (file.webkitSlice) {
-        blob = file.webkitSlice(start, stop + 1);
-    } else if (file.mozSlice) {
-        blob = file.mozSlice(start, stop + 1);
-    }
+    var blob = file.slice(start, stop + 1);
     reader.readAsBinaryString(blob);
+
 }
+google.load("visualization", "1", {packages: ["corechart"]});
+$( document ).ready(function () {
+    
+    document.querySelector('.readBytesButtons').addEventListener('click', function (evt) {    
+        if (evt.target.tagName.toLowerCase() === 'button') {
+            if(document.getElementById('files').files.length > 0) {
+                start();
+            }
+        }
+    }, false);
+    
+});
 
-document.querySelector('.readBytesButtons').addEventListener('click', function (evt) {
-    'use strict';
-    if (evt.target.tagName.toLowerCase() === 'button') {
-        var startByte = evt.target.getAttribute('data-startbyte'),
-            endByte = evt.target.getAttribute('data-endbyte'),
-            czas = $('select[name="czas"] option:selected').val(),
-            czas_od = ($('select[name="czas_od"] option').length > 0) ? $('select[name="czas_od"] option:selected').val() : 0,
-            czas_do = ($('select[name="czas_do"] option').length > 0) ? $('select[name="czas_do"] option:selected').val() : 0;
-
-        readBlob(startByte, endByte, parseInt(czas, 10), czas_od, czas_do);
-    }
-}, false);
+var start = function () {
+    var czas = $('select[name="czas"] option:selected').val(),
+    czas_od = ($('select[name="czas_od"] option').length > 0) ? $('select[name="czas_od"] option:selected').val() : 0,
+    czas_do = ($('select[name="czas_do"] option').length > 0) ? $('select[name="czas_do"] option:selected').val() : 0;
+    
+    readBlob(null, null, parseInt(czas, 10), czas_od, czas_do);
+    
+};
+google.setOnLoadCallback(start());
+    
